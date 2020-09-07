@@ -1,0 +1,71 @@
+#!/bin/sh
+
+function _client(){
+    if [ -z $1 ]; then
+        echo "Missing client argument"
+        return 1
+    fi
+    lookup=`echo $1 | tr '[:lower:]' '[:upper:]'`
+
+    eval "P4CLIENT=\$${lookup}_P4CLIENT"
+    eval "STREAMROOT=\$${lookup}_STREAMROOT"
+}
+
+function _subpath(){
+    SUBPATH="$1"
+}
+
+function _stream(){
+    if [ -z $1 ]; then
+        echo "Missing client argument"
+        return 1
+    fi
+    lookup=`echo $1 | tr '[:lower:]' '[:upper:]'`
+    eval "x=\$${lookup}_STREAMROOT"
+    echo $x
+}
+
+function EchoClient(){
+    _client $1
+    echo "$P4CLIENT"
+    echo "$STREAMROOT"
+}
+
+function EchoStream(){
+    STREAM=$(_stream $1)
+    echo "$STREAM"
+}
+
+function P4Login(){
+    printf "$P4PASSWD" | p4 login 
+}
+
+function ListChanges(){
+    _client $1
+    _subpath $2
+
+    echo $STREAMROOT
+
+    ESCAPEDSTREAMROOT=${STREAMROOT//\//\\\/}
+    
+    for x in `p4 -ztag -F "%change%" changes -m 50 "$STREAMROOT/$SUBPATH/..."`; do
+        DT=`date -d @$(p4 -ztag -F "%time%" describe $x) +"%d/%m %H:%m"`
+        
+        CHANGE=`p4 -ztag -F "%change% %desc%" describe $x`
+        echo $CHANGE | egrep -v -e '(.*(M|m)erge.*|.*Undo.*|Reapply)' > /dev/null
+        if [ $? -eq 1 ]; then
+            continue
+        fi
+        echo "\n\n$CHANGE [$DT]" | egrep --color="always" -e '^' -e '.*([0-1][0-9]|2[0-1])/08.*'
+        p4 describe -s $x | egrep -e "$STREAMROOT/$SUBPATH" | sed -n "s/\.\.\. $ESCAPEDSTREAMROOT\/\(.*\)#.*/\t\t\1/p"
+    done
+}
+
+function DiffStreams(){
+    _client $1
+    _subpath $3
+    OTHERSTREAMROOT=$(_stream $2)
+
+    echo "p4 diff2 -Od -q $STREAMROOT/$SUBPATH $OTHERSTREAMROOT/$SUBPATH"
+    p4 diff2 -Od -q $STREAMROOT/$SUBPATH $OTHERSTREAMROOT/$SUBPATH | grep -v " ====$"
+}
