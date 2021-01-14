@@ -11,6 +11,16 @@ function _client(){
     eval "STREAMROOT=\$${lookup}_STREAMROOT"
 }
 
+function _user(){
+    if [ -z $1 ]; then
+        echo "Missing user argument"
+        return 1
+    fi
+
+    LOOKUPUSER=$1
+}
+
+
 function _subpath(){
     SUBPATH="$1"
 }
@@ -23,6 +33,19 @@ function _stream(){
     lookup=`echo $1 | tr '[:lower:]' '[:upper:]'`
     eval "x=\$${lookup}_STREAMROOT"
     echo $x
+}
+
+function _shelf(){
+    if [ -z $1 ]; then
+        echo "Missing shelf"
+        return 1
+    fi
+    shelf=$1
+}
+
+function Change(){
+    desc="$1"
+    cl=$(p4 --field "Description=$desc" --field "Files="  --field "Change=new" change -o | p4 change -i|awk -F' ' '{print $2}')
 }
 
 function EchoClient(){
@@ -61,6 +84,17 @@ function ListChanges(){
     done
 }
 
+function UserChanges(){
+    _client $1
+    _user $2
+    _subpath $3
+    echo $LOOKUPUSER
+    echo "$STREAMROOT/$SUBPATH"
+    for x in `p4 -ztag -F "%change%" changes -u $LOOKUPUSER "$STREAMROOT/$SUBPATH/..."`; do
+        p4 describe -s $x 
+    done
+}
+
 function DiffStreams(){
     _client $1
     _subpath $3
@@ -68,4 +102,13 @@ function DiffStreams(){
 
     echo "p4 diff2 -Od -q $STREAMROOT/$SUBPATH $OTHERSTREAMROOT/$SUBPATH"
     p4 diff2 -Od -q $STREAMROOT/$SUBPATH $OTHERSTREAMROOT/$SUBPATH | grep -v " ====$"
+}
+
+function Unshelve(){
+   _shelf $1
+   if [ $? -eq 1 ]; then
+       return 1
+   fi
+   Change "Unshelve CL#$shelf"
+   p4 unshelve -s $shelf -c $cl
 }
