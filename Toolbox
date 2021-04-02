@@ -112,3 +112,11 @@ function Unshelve(){
    Change "Unshelve CL#$shelf"
    p4 unshelve -s $shelf -c $cl
 }
+
+function UniqueExtensions(){
+    find . -type f -name "*.*" | awk -F. '{print $NF}' |  tr '[:upper:]' '[:lower:]' | sort -u
+}
+
+function UniqueBinaryExtensions(){
+    find . -type f -exec grep -IL . "{}" \; | awk -F. '{print $NF}' |  tr '[:upper:]' '[:lower:]' | sort -u
+}
