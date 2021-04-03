@@ -120,3 +120,11 @@ function UniqueExtensions(){
 function UniqueBinaryExtensions(){
     find . -type f -exec grep -IL . "{}" \; | awk -F. '{print $NF}' |  tr '[:upper:]' '[:lower:]' | sort -u
 }
+
+function p4diff(){
+    diff --strip-trailing-cr  -ru <(p4 print $1) <(cat $1)
+}
+
+function p4difftool(){
+    vimdiff <(p4 print $1) <(cat $1)
+}
